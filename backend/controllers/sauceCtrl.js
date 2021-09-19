@@ -68,6 +68,9 @@ exports.createSauce = (req, res, next) => {
 }
 
 exports.modifySauce = (req, res, next) => {
+    if (req.params.userId != req.params.id) {
+        return res.status(403).json({message: '403: unauthorized request'});
+    }
     let sauceObject;
     sauceObject = req.body;
     if (req.file) {
@@ -133,6 +136,9 @@ exports.modifySauce = (req, res, next) => {
 }
 
 exports.deleteSauce = (req, res, next) => {
+    if (req.params.userId != req.params.id) {
+        return res.status(403).json({message: '403: unauthorized request'});
+    }
     Sauce.findOne({_id: req.params.id})
         .then(sauce => {
             const filename = sauce.imageUrl.split('/images/')[1];
