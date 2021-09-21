@@ -15,8 +15,11 @@ exports.getOneSauce = (req, res, next) => {
 }
 
 exports.createSauce = (req, res, next) => {
-    console.log(req.body);
     const sauceObject = JSON.parse(req.body.sauce);
+    //Check if token ID != sauce userId
+    if (req.params.userId != sauceObject.userId) {
+        return res.status(403).json({message: '403: unauthorized request'});
+    }
     delete sauceObject._id;
     for (element in sauceObject) {
         //test if a field is empty
