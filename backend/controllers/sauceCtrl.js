@@ -15,6 +15,7 @@ exports.getOneSauce = (req, res, next) => {
 }
 
 exports.createSauce = (req, res, next) => {
+    console.log(req.body);
     const sauceObject = JSON.parse(req.body.sauce);
     delete sauceObject._id;
     for (element in sauceObject) {
@@ -68,13 +69,14 @@ exports.createSauce = (req, res, next) => {
 }
 
 exports.modifySauce = (req, res, next) => {
-    if (req.params.userId != req.params.id) {
-        return res.status(403).json({message: '403: unauthorized request'});
-    }
     let sauceObject;
     sauceObject = req.body;
     if (req.file) {
         sauceObject = JSON.parse(req.body.sauce);
+    }
+    //Check if token ID != sauce userId
+    if (req.params.userId != sauceObject.userId) {
+        return res.status(403).json({message: '403: unauthorized request'});
     }
     for (element in sauceObject) {
         //test if a field is empty
@@ -124,10 +126,8 @@ exports.modifySauce = (req, res, next) => {
             ...JSON.parse(req.body.sauce),
             imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
         };
-        console.log(sauceObject);
     } else {
         sauceObject = {...req.body};
-        console.log(sauceObject);
     }
     
     Sauce.updateOne({_id: req.params.id}, {...sauceObject, _id: req.params.id})
@@ -136,11 +136,12 @@ exports.modifySauce = (req, res, next) => {
 }
 
 exports.deleteSauce = (req, res, next) => {
-    if (req.params.userId != req.params.id) {
-        return res.status(403).json({message: '403: unauthorized request'});
-    }
     Sauce.findOne({_id: req.params.id})
         .then(sauce => {
+            //Check if token ID != sauce userId
+            if (req.params.userId != sauce.userId) {
+                return res.status(403).json({message: '403: unauthorized request'});
+            }
             const filename = sauce.imageUrl.split('/images/')[1];
             fs.unlink(`images/${filename}`, () => {
                 Sauce.deleteOne({_id: req.params.id})
@@ -152,6 +153,10 @@ exports.deleteSauce = (req, res, next) => {
 }
 
 exports.likeSauce = (req, res, next) => {
+    //Check if token ID != sauce userId
+    if (req.params.userId != req.body.userId) {
+        return res.status(403).json({message: '403: unauthorized request'});
+    }
     Sauce.findOne({_id: req.params.id})
         .then(sauce => {
             switch(req.body.like) {
@@ -159,49 +164,40 @@ exports.likeSauce = (req, res, next) => {
                     if (!sauce.usersLiked.includes(req.body.userId)) {
                         sauce.likes ++;
                         sauce.usersLiked.push(req.body.userId);
-                        Sauce.updateOne({_id: req.params.id}, sauce)
-                            .then(() => res.status(201).json({message: 'Likes updated !'}))
-                            .catch((error) => res.status(400).json({error}));
                     }
                     if (sauce.usersDisliked.includes(req.body.userId)) {
                         sauce.dislikes --;
                         sauce.usersDisliked.splice(sauce.usersDisliked.find(id => id == req.body.userId));
-                        Sauce.updateOne({_id: req.params.id}, sauce)
-                            .then(() => res.status(201).json({message: 'Dislikes updated !'}))
-                            .catch((error) => res.status(400).json({error}));
                     }
+                    Sauce.updateOne({_id: req.params.id}, sauce)
+                            .then(() => res.status(201).json({message: 'Likes/Dislikes updated !'}))
+                            .catch((error) => res.status(400).json({error}));
                     break;
                 case -1: //dislike
                     if (!sauce.usersDisliked.includes(req.body.userId)) {
                         sauce.dislikes ++;
                         sauce.usersDisliked.push(req.body.userId);
-                        Sauce.updateOne({_id: req.params.id}, sauce)
-                            .then(() => res.status(201).json({message: 'Dislikes updated !'}))
-                            .catch((error) => res.status(400).json({error}));
                     }
                     if (sauce.usersLiked.includes(req.body.userId)) {
                         sauce.likes --;
                         sauce.usersLiked.splice(sauce.usersLiked.find(id => id == req.body.userId));
-                        Sauce.updateOne({_id: req.params.id}, sauce)
-                            .then(() => res.status(201).json({message: 'Likes updated !'}))
-                            .catch((error) => res.status(400).json({error}));
                     }
+                    Sauce.updateOne({_id: req.params.id}, sauce)
+                            .then(() => res.status(201).json({message: 'Likes/Dislikes updated !'}))
+                            .catch((error) => res.status(400).json({error}));
                     break;
                 case 0: //disable like or dislike
                     if (sauce.usersLiked.includes(req.body.userId)) {
                         sauce.likes --;
                         sauce.usersLiked.splice(sauce.usersLiked.find(id => id == req.body.userId));
-                        Sauce.updateOne({_id: req.params.id}, sauce)
-                            .then(() => res.status(201).json({message: 'Likes updated !'}))
-                            .catch((error) => res.status(400).json({error}));
                     }
                     if (sauce.usersDisliked.includes(req.body.userId)) {
                         sauce.dislikes --;
                         sauce.usersDisliked.splice(sauce.usersDisliked.find(id => id == req.body.userId));
-                        Sauce.updateOne({_id: req.params.id}, sauce)
-                            .then(() => res.status(201).json({message: 'Dislikes updated !'}))
-                            .catch((error) => res.status(400).json({error}));
                     }
+                    Sauce.updateOne({_id: req.params.id}, sauce)
+                            .then(() => res.status(201).json({message: 'Likes/Dislikes updated !'}))
+                            .catch((error) => res.status(400).json({error}));
                     break;
                 default:
                     console.log('No case found !');
